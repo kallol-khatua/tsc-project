@@ -60,31 +60,10 @@ app.use(bodyParser.raw({ type: 'image/jpeg', limit: '10mb' })); // Adjust 'type'
 // Function to handle image upload
 app.post("/upload-image", async (req, res) => {
     try {
-        // const uploadDir = path.join(__dirname, 'uploads');
+        // The raw binary data is available in req.body
+        const imageBuffer = req.body;
 
-        // // Ensure upload directory exists
-        // if (!fs.existsSync(uploadDir)) {
-        //     fs.mkdirSync(uploadDir);
-        // }
-
-        // Generate a unique filename
-        // const filename = `${Date.now()}.jpg`; // Assuming JPEG image
-        // const filePath = path.join(uploadDir, filename);
-        // console.log(filePath)
-        // console.log(filename)
-
-        // // Save binary data to a file
-        // fs.writeFile(filePath, req.body, (err) => {
-        //     if (err) {
-        //         console.error('Error saving file:', err);
-        //         return res.status(500).send('Failed to save file');
-        //     }
-        //     console.log('File saved:', filePath);
-        //     broadcast(JSON.stringify({ message: "New image", url: filePath }))
-        //     res.status(200).send({ message: 'File uploaded successfully', file: filename });
-        // });
-
-        const imageBuffer = req.body; // The raw binary data is available in req.body
+        // Setting upload directory
         const uploadDir = path.join(__dirname, 'uploads');
 
         // Ensure upload directory exists
@@ -95,19 +74,18 @@ app.post("/upload-image", async (req, res) => {
         // Save the image to a file
         const filename = `${Date.now()}.jpg`; // Assuming JPEG image
         const filePath = path.join(uploadDir, filename);
-        console.log(filePath)
-        console.log(filename)
+        // console.log(filePath)  // e.g. /opt/render/project/src/uploads/1731838647694.jpg
+        // console.log(filename)  // e.g. 1731838647694.jpg
         fs.writeFile(filePath, imageBuffer, (err) => {
             if (err) {
                 console.error('Error saving image:', err);
                 return res.status(500).send('Failed to save image');
             }
-            console.log('Image saved:', filePath);
-            res.status(200).send('Image uploaded successfully');
+            const imageUrl = `${process.env.BACKEND_BASE_URL}/uploads/${filename}`
+            console.log('Image saved:', imageUrl);
+            broadcast(JSON.stringify({ message: "New image", url: imageUrl }))
+            return res.status(200).send('Image uploaded successfully');
         });
-
-
-        return res.status(200).send({ success: true, message: "Image saved successfully" });
     } catch (error) {
         console.log("Error while uploading image", error);
         return res.status(500).send({ success: false, message: "Error while uploading image", error: error });
