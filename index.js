@@ -4,6 +4,8 @@ const app = express();
 const mongoose = require("mongoose");
 const cors = require('cors');
 const path = require('path');
+const bodyParser = require('body-parser');
+
 const { WebSocketServer } = require('ws');
 
 app.use(cors());
@@ -47,12 +49,40 @@ const broadcast = (data) => {
 app.use("/uploads", express.static(path.join(__dirname, './uploads')));
 
 // Multer config
-const upload = require("./multerconfig")
-app.use('/upload-image', express.raw({ type: 'application/octet-stream', limit: '10mb' }));
+// const upload = require("./multerconfig")
+// app.use('/upload-image', express.raw({ type: 'application/octet-stream', limit: '10mb' }));
+// Middleware to handle raw binary data
+app.use(bodyParser.raw({ type: 'image/jpeg', limit: '10mb' })); // Adjust 'type' and 'limit' as needed
+
 
 // Function to handle image upload
 app.post("/upload-image", async (req, res) => {
     try {
+        // const uploadDir = path.join(__dirname, 'uploads');
+
+        // // Ensure upload directory exists
+        // if (!fs.existsSync(uploadDir)) {
+        //     fs.mkdirSync(uploadDir);
+        // }
+
+        // Generate a unique filename
+        // const filename = `${Date.now()}.jpg`; // Assuming JPEG image
+        // const filePath = path.join(uploadDir, filename);
+        // console.log(filePath)
+        // console.log(filename)
+
+        // // Save binary data to a file
+        // fs.writeFile(filePath, req.body, (err) => {
+        //     if (err) {
+        //         console.error('Error saving file:', err);
+        //         return res.status(500).send('Failed to save file');
+        //     }
+        //     console.log('File saved:', filePath);
+        //     broadcast(JSON.stringify({ message: "New image", url: filePath }))
+        //     res.status(200).send({ message: 'File uploaded successfully', file: filename });
+        // });
+
+        const imageBuffer = req.body; // The raw binary data is available in req.body
         const uploadDir = path.join(__dirname, 'uploads');
 
         // Ensure upload directory exists
@@ -60,29 +90,35 @@ app.post("/upload-image", async (req, res) => {
             fs.mkdirSync(uploadDir);
         }
 
-        // Generate a unique filename
+        // Save the image to a file
         const filename = `${Date.now()}.jpg`; // Assuming JPEG image
         const filePath = path.join(uploadDir, filename);
         console.log(filePath)
         console.log(filename)
-
-        // Save binary data to a file
-        fs.writeFile(filePath, req.body, (err) => {
+        fs.writeFile(filePath, imageBuffer, (err) => {
             if (err) {
-                console.error('Error saving file:', err);
-                return res.status(500).send('Failed to save file');
+                console.error('Error saving image:', err);
+                return res.status(500).send('Failed to save image');
             }
-            console.log('File saved:', filePath);
-            broadcast(JSON.stringify({ message: "New image", url: filePath }))
-            res.status(200).send({ message: 'File uploaded successfully', file: filename });
+            console.log('Image saved:', filePath);
+            res.status(200).send('Image uploaded successfully');
         });
 
-        return res.status(200).send({ success: true, message: "Image saved successfully", url: url });
+
+        return res.status(200).send({ success: true, message: "Image saved successfully" });
     } catch (error) {
         console.log("Error while uploading image", error);
         return res.status(500).send({ success: false, message: "Error while uploading image", error: error });
     }
 })
+
+
+
+
+
+
+
+
 // app.post("/upload-image", upload.single('image'), async (req, res) => {
 //     try {
 //         // console.log(req.file)
