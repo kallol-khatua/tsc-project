@@ -93,8 +93,9 @@ app.post("/upload-image", async (req, res) => {
 })
 
 
-
-
+app.get("/hello-world", async (req, res) => {
+    return res.status(200).send({ success: true, message: "Hello World!" });
+})
 
 
 
