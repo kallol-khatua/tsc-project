@@ -5,7 +5,7 @@ const fs = require('fs');
 // Set up multer for storing uploaded files
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        const uploadPath = 'uploads/';
+        const uploadPath = 'images/';
         if (!fs.existsSync(uploadPath)) {
             fs.mkdirSync(uploadPath);
         }

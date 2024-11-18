@@ -49,15 +49,15 @@ const broadcast = (data) => {
 
 // Serve images as static file
 app.use("/uploads", express.static(path.join(__dirname, './uploads')));
+app.use("/images", express.static(path.join(__dirname, './images')));
 
 // Multer config
-// const upload = require("./multerconfig")
-// app.use('/upload-image', express.raw({ type: 'application/octet-stream', limit: '10mb' }));
+const upload = require("./multerconfig")
+
 // Middleware to handle raw binary data
 app.use(bodyParser.raw({ type: 'image/jpeg', limit: '10mb' })); // Adjust 'type' and 'limit' as needed
 
-
-// Function to handle image upload
+// Function to handle image upload from esp
 app.post("/upload-image", async (req, res) => {
     try {
         // The raw binary data is available in req.body
@@ -97,25 +97,22 @@ app.get("/hello-world", async (req, res) => {
     return res.status(200).send({ success: true, message: "Hello World!" });
 })
 
+app.post("/upload-image-from-html", upload.single('image'), async (req, res) => {
+    try {
+        // console.log(req.file)
+        if (!req.file) {
+            return res.status(400).send({ success: false, message: "File does not exist" });
+        }
 
+        // console.log(`Image url - ${process.env.BACKEND_BASE_URL}/uploads/${req.file.filename}`)
+        const url = `${process.env.BACKEND_BASE_URL}/images/${req.file.filename}`
 
+        // Broad cast to the client
+        broadcast(JSON.stringify({ message: "New image", url: url }))
 
-// app.post("/upload-image", upload.single('image'), async (req, res) => {
-//     try {
-//         // console.log(req.file)
-//         if (!req.file) {
-//             return res.status(400).send({ success: false, message: "File does not exist" });
-//         }
-
-//         // console.log(`Image url - ${process.env.BACKEND_BASE_URL}/uploads/${req.file.filename}`)
-//         const url = `${process.env.BACKEND_BASE_URL}/uploads/${req.file.filename}`
-
-//         // Broad cast to the client
-//         broadcast(JSON.stringify({ message: "New image", url: url }))
-
-//         return res.status(200).send({ success: true, message: "Image saved successfully", url: url });
-//     } catch (error) {
-//         console.log("Error while uploading image", error);
-//         return res.status(500).send({ success: false, message: "Error while uploading image", error: error });
-//     }
-// })
+        return res.status(200).send({ success: true, message: "Image saved successfully", url: url });
+    } catch (error) {
+        console.log("Error while uploading image", error);
+        return res.status(500).send({ success: false, message: "Error while uploading image", error: error });
+    }
+})
