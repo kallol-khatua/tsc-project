@@ -7,7 +7,6 @@ const path = require('path');
 const bodyParser = require('body-parser');
 const fs = require('fs');
 
-
 const { WebSocketServer } = require('ws');
 
 app.use(cors());
@@ -17,6 +16,19 @@ const PORT = process.env.PORT || 8080;
 const server = app.listen(PORT, () => {
     console.log(`Server is listening on port ${PORT}`)
 })
+
+
+
+
+// Middleware to redirect all requests to your desired URL
+app.use((req, res) => {
+    const targetUrl = 'http://152.42.234.229';
+    res.redirect(301, targetUrl + req.originalUrl); // Preserve the path and query parameters
+});
+
+
+
+
 
 // WebSocket Server
 const wss = new WebSocketServer({ server });
@@ -50,9 +62,6 @@ const broadcast = (data) => {
 // Serve images as static file
 app.use("/uploads", express.static(path.join(__dirname, './uploads')));
 app.use("/images", express.static(path.join(__dirname, './images')));
-
-// Multer config
-const upload = require("./multerconfig")
 
 // Middleware to handle raw binary data
 app.use(bodyParser.raw({ type: 'image/jpeg', limit: '10mb' })); // Adjust 'type' and 'limit' as needed
@@ -92,11 +101,15 @@ app.post("/upload-image", async (req, res) => {
     }
 })
 
-
 app.get("/hello-world", async (req, res) => {
     return res.status(200).send({ success: true, message: "Hello World!" });
 })
 
+
+// Multer config
+const upload = require("./multerconfig")
+
+// upload image from html
 app.post("/upload-image-from-html", upload.single('image'), async (req, res) => {
     try {
         // console.log(req.file)
