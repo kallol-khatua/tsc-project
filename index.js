@@ -19,17 +19,6 @@ const server = app.listen(PORT, () => {
 
 
 
-
-// Middleware to redirect all requests to your desired URL
-app.use((req, res) => {
-    const targetUrl = 'http://152.42.234.229';
-    res.redirect(301, targetUrl + req.originalUrl); // Preserve the path and query parameters
-});
-
-
-
-
-
 // WebSocket Server
 const wss = new WebSocketServer({ server });
 // console.log(wss)
