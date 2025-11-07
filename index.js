@@ -6,7 +6,7 @@ const cors = require('cors');
 const path = require('path');
 const bodyParser = require('body-parser');
 const fs = require('fs');
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 
 const { WebSocketServer } = require('ws');
 
