@@ -6,6 +6,7 @@ const cors = require('cors');
 const path = require('path');
 const bodyParser = require('body-parser');
 const fs = require('fs');
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
 const { WebSocketServer } = require('ws');
 
@@ -17,6 +18,19 @@ const server = app.listen(PORT, () => {
     console.log(`Server is listening on port ${PORT}`)
 })
 
+
+// AWS S3 Configuration
+const s3 = new S3Client({
+    region: process.env.AWS_REGION,
+    credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    },
+});
+
+
+// Middleware to handle raw binary data
+app.use(express.raw({ type: "image/*", limit: "10mb" }));
 
 
 // WebSocket Server
@@ -55,40 +69,76 @@ app.use("/images", express.static(path.join(__dirname, './images')));
 // Middleware to handle raw binary data
 app.use(bodyParser.raw({ type: 'image/jpeg', limit: '10mb' })); // Adjust 'type' and 'limit' as needed
 
-// Function to handle image upload from esp
+
 app.post("/upload-image", async (req, res) => {
     try {
-        // The raw binary data is available in req.body
         const imageBuffer = req.body;
 
-        // Setting upload directory
-        const uploadDir = path.join(__dirname, 'uploads');
+        // Create a unique filename
+        const filename = `${Date.now()}.jpg`;
+        const bucketName = process.env.AWS_BUCKET_NAME;
 
-        // Ensure upload directory exists
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir);
-        }
-
-        // Save the image to a file
-        const filename = `${Date.now()}.jpg`; // Assuming JPEG image
-        const filePath = path.join(uploadDir, filename);
-        // console.log(filePath)  // e.g. /opt/render/project/src/uploads/1731838647694.jpg
-        // console.log(filename)  // e.g. 1731838647694.jpg
-        fs.writeFile(filePath, imageBuffer, (err) => {
-            if (err) {
-                console.error('Error saving image:', err);
-                return res.status(500).send('Failed to save image');
-            }
-            const imageUrl = `${process.env.BACKEND_BASE_URL}/uploads/${filename}`
-            console.log('Image saved:', imageUrl);
-            broadcast(JSON.stringify({ message: "New image", url: imageUrl }))
-            return res.status(200).send('Image uploaded successfully');
+        // Upload the image to S3
+        const command = new PutObjectCommand({
+            Bucket: bucketName,
+            Key: `uploads/${filename}`,
+            Body: imageBuffer,
+            ContentType: "image/jpeg",
+            ACL: "public-read", // Optional, if you want public access
         });
+
+        await s3.send(command);
+
+        // Construct the image URL
+        const imageUrl = `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/uploads/${filename}`;
+
+        console.log("Image uploaded to S3:", imageUrl);
+
+        // Optional: broadcast event
+        broadcast(JSON.stringify({ message: "New image", url: imageUrl }));
+
+        return res.status(200).json({ success: true, url: imageUrl });
     } catch (error) {
-        console.log("Error while uploading image", error);
-        return res.status(500).send({ success: false, message: "Error while uploading image", error: error });
+        console.error("Error uploading to S3:", error);
+        return res.status(500).json({ success: false, message: "Error uploading image", error });
     }
-})
+});
+
+
+// // Function to handle image upload from esp
+// app.post("/upload-image", async (req, res) => {
+//     try {
+//         // The raw binary data is available in req.body
+//         const imageBuffer = req.body;
+
+//         // Setting upload directory
+//         const uploadDir = path.join(__dirname, 'uploads');
+
+//         // Ensure upload directory exists
+//         if (!fs.existsSync(uploadDir)) {
+//             fs.mkdirSync(uploadDir);
+//         }
+
+//         // Save the image to a file
+//         const filename = `${Date.now()}.jpg`; // Assuming JPEG image
+//         const filePath = path.join(uploadDir, filename);
+//         // console.log(filePath)  // e.g. /opt/render/project/src/uploads/1731838647694.jpg
+//         // console.log(filename)  // e.g. 1731838647694.jpg
+//         fs.writeFile(filePath, imageBuffer, (err) => {
+//             if (err) {
+//                 console.error('Error saving image:', err);
+//                 return res.status(500).send('Failed to save image');
+//             }
+//             const imageUrl = `${process.env.BACKEND_BASE_URL}/uploads/${filename}`
+//             console.log('Image saved:', imageUrl);
+//             broadcast(JSON.stringify({ message: "New image", url: imageUrl }))
+//             return res.status(200).send('Image uploaded successfully');
+//         });
+//     } catch (error) {
+//         console.log("Error while uploading image", error);
+//         return res.status(500).send({ success: false, message: "Error while uploading image", error: error });
+//     }
+// })
 
 app.get("/hello-world", async (req, res) => {
     return res.status(200).send({ success: true, message: "Hello World!" });
