@@ -84,7 +84,6 @@ app.post("/upload-image", async (req, res) => {
             Key: `uploads/${filename}`,
             Body: imageBuffer,
             ContentType: "image/jpeg",
-            ACL: "public-read", // Optional, if you want public access
         });
 
         await s3.send(command);
